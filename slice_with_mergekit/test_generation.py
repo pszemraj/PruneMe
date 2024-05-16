@@ -5,17 +5,22 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 model_path = "./merged"  # or the path/model_name you have
 
 # Your custom quantization configuration
-quantization_config = BitsAndBytesConfig(load_in_4bit=True,
-                                         bnb_4bit_use_double_quant=True,
-                                         bnb_4bit_quant_type="nf4",
-                                         bnb_4bit_compute_dtype=torch.bfloat16)
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
 
 # Load the model and tokenizer
-model = AutoModelForCausalLM.from_pretrained(model_path,  
-                                             device_map="auto", 
-                                             quantization_config=quantization_config, 
-                                             output_hidden_states=True)
+model = AutoModelForCausalLM.from_pretrained(
+    model_path,
+    device_map="auto",
+    quantization_config=quantization_config,
+    output_hidden_states=True,
+)
 tokenizer = AutoTokenizer.from_pretrained(model_path)
+
 
 # Function to generate text
 def generate_text(input_text):
@@ -27,8 +32,9 @@ def generate_text(input_text):
 
     # Decode the generated tokens to a readable text
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-    
+
     return generated_text
+
 
 # Example usage
 input_text = "The future of AI is"
