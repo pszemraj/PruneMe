@@ -1,5 +1,6 @@
 import argparse
 import csv
+import json
 import logging
 from typing import Optional
 
@@ -8,8 +9,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from utils import check_ampere_gpu, compute_block_distances, get_last_non_padded_tokens
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 logging.basicConfig(level=logging.INFO)
 
@@ -214,7 +216,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    logging.info(f"Running with arguments: {args.__dict__}")
+    logging.info(f"Running with args:\n{json.dumps(args.__dict__)}")
 
     main(
         args.model_path,
