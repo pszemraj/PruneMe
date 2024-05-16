@@ -17,7 +17,7 @@ model = AutoModelForCausalLM.from_pretrained(
     model_path,
     device_map="auto",
     quantization_config=quantization_config,
-    output_hidden_states=True,
+    output_hidden_states=False,  # Disable output_hidden_states
 )
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 
@@ -38,7 +38,6 @@ def generate_text(input_text: str) -> str:
         max_new_tokens=50,
         top_k=4,
         penalty_alpha=0.6,
-        low_memory=True,
         num_return_sequences=1,
     )
 
