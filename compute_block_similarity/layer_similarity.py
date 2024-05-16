@@ -31,24 +31,25 @@ def main(
     dataset_subset: Optional[str] = "train",
     compile: bool = False,
     quantize: bool = False,
+    sdp_kernel: bool = False,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # if resource is a problem
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16,
-    )
+    )  # if resource is a problem
 
+    logging.info(f"Loading model, quantize={quantize}")
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map="auto",
         quantization_config=quantization_config if quantize else None,
         output_hidden_states=True,
-    )
-    model.eval()
+    ).eval()
+
     if compile:
         logging.info("Compiling model")
         model = torch.compile(model)
@@ -80,13 +81,18 @@ def main(
             truncation=True,
         ).to(device)
 
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=True,
-            enable_math=False,
-            enable_mem_efficient=False,
-        ):
+        if sdp_kernel:
+            with torch.backends.cuda.sdp_kernel(
+                enable_flash=True,
+                enable_math=False,
+                enable_mem_efficient=False,
+            ):
+                with torch.no_grad():
+                    outputs = model(**inputs)
+        else:
             with torch.no_grad():
                 outputs = model(**inputs)
+
         attention_mask = inputs["attention_mask"]
         hidden_states = outputs.hidden_states
         last_non_padded_hidden_states = get_last_non_padded_tokens(
