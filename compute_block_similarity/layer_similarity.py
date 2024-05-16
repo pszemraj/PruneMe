@@ -55,7 +55,7 @@ def main(
 
     dataset = datasets.load_dataset(dataset, split=dataset_subset)
     if dataset_size:
-        dataset = dataset.select(range(dataset_size))
+        dataset = dataset.shuffle().select(range(dataset_size))
 
     dataloader = DataLoader(
         dataset[dataset_column], batch_size=batch_size, shuffle=False, drop_last=True
