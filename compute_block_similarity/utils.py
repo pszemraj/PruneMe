@@ -1,7 +1,7 @@
-import torch
+import logging
 from typing import List
 
-import logging
+import torch
 
 logging.basicConfig(level=logging.INFO)
 

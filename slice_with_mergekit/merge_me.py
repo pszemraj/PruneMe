@@ -8,7 +8,6 @@ LOW_CPU_MEMORY = False  # enable if you somehow have more VRAM than RAM+swap
 # actually do merge
 import torch
 import yaml
-
 from mergekit.config import MergeConfiguration
 from mergekit.merge import MergeOptions, run_merge
 

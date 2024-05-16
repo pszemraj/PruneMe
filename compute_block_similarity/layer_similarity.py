@@ -8,9 +8,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import check_ampere_gpu, compute_block_distances, get_last_non_padded_tokens
-
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from utils import check_ampere_gpu, compute_block_distances, get_last_non_padded_tokens
 
 logging.basicConfig(level=logging.INFO)
 
@@ -73,7 +72,6 @@ def main(
     all_distances = [[] for _ in range(model.config.num_hidden_layers - layers_to_skip)]
 
     for batch in tqdm(dataloader, desc="Processing batches"):
-
         inputs = tokenizer(
             batch,
             return_tensors="pt",
