@@ -1,22 +1,24 @@
-import logging
-import csv
 import argparse
-import numpy as np
-from tqdm import tqdm
+import csv
+import logging
+from typing import Optional
 
+import datasets
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-import datasets
+from tqdm import tqdm
+from utils import check_ampere_gpu, compute_block_distances, get_last_non_padded_tokens
 
-from utils import get_last_non_padded_tokens, compute_block_distances
-from typing import Optional
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 logging.basicConfig(level=logging.INFO)
 
 # Set seed
 torch.manual_seed(42)
 np.random.seed(42)
+
+check_ampere_gpu()
 
 
 def main(
