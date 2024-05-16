@@ -27,7 +27,9 @@ def main(
     max_length: int,
     layers_to_skip: int,
     dataset_size: Optional[int] = None,
-    dataset_subset: Optional[str] = "eval",
+    dataset_subset: Optional[str] = "train",
+    compile: bool = False,
+    quantize: bool = False,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -42,19 +44,23 @@ def main(
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map="auto",
-        quantization_config=quantization_config,
+        quantization_config=quantization_config if quantize else None,
         output_hidden_states=True,
     )
+    model.eval()
+    if compile:
+        logging.info("Compiling model")
+        model = torch.compile(model)
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     if not tokenizer.pad_token:
+        logging.warning("Adding padding token to tokenizer")
         tokenizer.pad_token = tokenizer.eos_token
-
-    model.eval()
 
     dataset = datasets.load_dataset(dataset, split=dataset_subset)
     if dataset_size:
+        logging.info(f"Selecting first {dataset_size} examples")
         dataset = dataset.shuffle().select(range(dataset_size))
 
     dataloader = DataLoader(
@@ -65,6 +71,7 @@ def main(
     all_distances = [[] for _ in range(model.config.num_hidden_layers - layers_to_skip)]
 
     for batch in tqdm(dataloader, desc="Processing batches"):
+
         inputs = tokenizer(
             batch,
             return_tensors="pt",
@@ -72,8 +79,14 @@ def main(
             max_length=max_length,
             truncation=True,
         ).to(device)
-        with torch.no_grad():
-            outputs = model(**inputs)
+
+        with torch.backends.cuda.sdp_kernel(
+            enable_flash=True,
+            enable_math=False,
+            enable_mem_efficient=False,
+        ):
+            with torch.no_grad():
+                outputs = model(**inputs)
         attention_mask = inputs["attention_mask"]
         hidden_states = outputs.hidden_states
         last_non_padded_hidden_states = get_last_non_padded_tokens(
@@ -96,6 +109,12 @@ def main(
         )
         for i, distance in enumerate(distances):
             all_distances[i].append(distance)
+
+        # clean up
+        del inputs
+        del outputs
+        del attention_mask
+        del hidden_states
 
     # Calculate average distances for each block
     average_distances = [np.mean(block_distances) for block_distances in all_distances]
@@ -130,7 +149,10 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run model analysis.")
+    parser = argparse.ArgumentParser(
+        description="Run model analysis.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument(
         "--model_path", type=str, required=True, help="Path to the model."
     )
@@ -144,16 +166,19 @@ if __name__ == "__main__":
         help="The specific column of the dataset to use.",
     )
     parser.add_argument(
-        "--batch_size", type=int, required=True, help="Batch size for processing."
+        "--batch_size", type=int, default=4, help="Batch size for processing."
     )
     parser.add_argument(
         "--max_length",
         type=int,
-        required=True,
+        default=2048,
         help="Maximum length of the tokenized input.",
     )
     parser.add_argument(
-        "--layers_to_skip", type=int, required=True, help="Number of layers to skip."
+        "--layers_to_skip",
+        type=int,
+        default=8,
+        help="Number of layers to skip.",
     )
     parser.add_argument(
         "--dataset_size",
@@ -163,14 +188,27 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_subset",
         type=str,
-        default="eval",
+        default="train",
         help="Subset of the dataset to use (e.g., 'train', 'eval').",
+    )
+    parser.add_argument(
+        "-c",
+        "--compile",
+        action="store_true",
+        help="Whether to compile the model for faster inference.",
+    )
+    parser.add_argument(
+        "-q",
+        "--quantize",
+        action="store_true",
+        help="Whether to quantize the model for faster inference.",
     )
     parser.add_argument(
         "--device", type=str, help="Device to run the model on ('cpu', 'cuda')."
     )
 
     args = parser.parse_args()
+    logging.info(f"Running with arguments: {args.__dict__}")
 
     main(
         args.model_path,
@@ -181,4 +219,6 @@ if __name__ == "__main__":
         args.layers_to_skip,
         args.dataset_size,
         args.dataset_subset,
+        compile=args.compile,
+        quantize=args.quantize,
     )
