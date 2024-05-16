@@ -1,5 +1,7 @@
-transformers
 datasets
-accelerate
-bitsandbytes
+mergekit
+numpy
+PyYAML
 torch
+tqdm
+transformers
