@@ -22,13 +22,25 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 
 
-# Function to generate text
-def generate_text(input_text):
+def generate_text(input_text: str) -> str:
+    """
+    generate_text - generate text using the model
+
+    :param str input_text: input text
+    :return str: generated text
+    """
     # Encode the input text
-    input_ids = tokenizer.encode(input_text, return_tensors="pt")
+    inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
 
     # Generate a sequence of tokens in response to the input text
-    output = model.generate(input_ids, max_length=50, num_return_sequences=1)
+    output = model.generate(
+        **inputs,
+        max_new_tokens=50,
+        top_k=4,
+        penalty_alpha=0.6,
+        low_memory=True,
+        num_return_sequences=1,
+    )
 
     # Decode the generated tokens to a readable text
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
