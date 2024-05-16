@@ -48,6 +48,7 @@ def main(
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map="auto",
+        torch_dtype=torch.bfloat16 if not quantize else None,
         quantization_config=quantization_config if quantize else None,
         output_hidden_states=True,
     ).eval()
@@ -216,7 +217,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    logging.info(f"Running with args:\n{json.dumps(args.__dict__)}")
+    logging.info(f"Running with args:\n{json.dumps(args.__dict__, indent=2)}")
 
     main(
         args.model_path,
