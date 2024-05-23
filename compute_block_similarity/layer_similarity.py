@@ -37,7 +37,6 @@ def main(
     sdp_kernel: bool = False,
     trust_remote_code: bool = False,
 ):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -86,7 +85,7 @@ def main(
             padding="longest",
             max_length=max_length,
             truncation=True,
-        ).to(device)
+        ).to(model.device)
 
         if sdp_kernel:
             with torch.backends.cuda.sdp_kernel(
@@ -163,6 +162,7 @@ def main(
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(
         description="Run model analysis.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -227,9 +227,6 @@ if __name__ == "__main__":
         "--trust_remote_code",
         action="store_true",
         help="Whether to trust the remote code when loading the model.",
-    )
-    parser.add_argument(
-        "--device", type=str, help="Device to run the model on ('cpu', 'cuda')."
     )
 
     args = parser.parse_args()
