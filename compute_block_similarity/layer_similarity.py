@@ -35,6 +35,7 @@ def main(
     compile: bool = False,
     quantize: bool = False,
     sdp_kernel: bool = False,
+    trust_remote_code: bool = False,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -46,19 +47,21 @@ def main(
     )  # if resource is a problem
 
     logging.info(f"Loading model, quantize={quantize}")
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, trust_remote_code=trust_remote_code
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map="auto",
         torch_dtype=torch.bfloat16 if not quantize else None,
         quantization_config=quantization_config if quantize else None,
         output_hidden_states=True,
+        trust_remote_code=trust_remote_code,
     ).eval()
 
     if compile:
         logging.info("Compiling model")
         model = torch.compile(model)
-
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     if not tokenizer.pad_token:
         logging.warning("Adding padding token to tokenizer")
@@ -66,7 +69,7 @@ def main(
 
     dataset = datasets.load_dataset(dataset, split=dataset_subset)
     if dataset_size:
-        logging.info(f"Selecting first {dataset_size} examples")
+        logging.info(f"Selecting {dataset_size} examples at random")
         dataset = dataset.shuffle().select(range(dataset_size))
 
     dataloader = DataLoader(
@@ -209,10 +212,21 @@ if __name__ == "__main__":
         help="Whether to compile the model for faster inference.",
     )
     parser.add_argument(
+        "--sdp_kernel",
+        action="store_true",
+        help="Whether to enable sdp kernel for faster inference.",
+    )
+    parser.add_argument(
         "-q",
         "--quantize",
         action="store_true",
         help="Whether to quantize the model for faster inference.",
+    )
+    parser.add_argument(
+        "-trust",
+        "--trust_remote_code",
+        action="store_true",
+        help="Whether to trust the remote code when loading the model.",
     )
     parser.add_argument(
         "--device", type=str, help="Device to run the model on ('cpu', 'cuda')."
@@ -232,4 +246,6 @@ if __name__ == "__main__":
         args.dataset_subset,
         compile=args.compile,
         quantize=args.quantize,
+        sdp_kernel=args.sdp_kernel,
+        trust_remote_code=args.trust_remote_code,
     )
