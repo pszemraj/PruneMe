@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 import datasets
@@ -132,7 +133,8 @@ def main(
     min_distance = float("inf")  # Initialize with infinity
     min_distance_layer = 0  # Initialize with an impossible value
 
-    with open("layer_distances.csv", "w", newline="") as csvfile:
+    out_path = Path.cwd() / f"layer_distances_{model_path.split('/')[-1]}.csv"
+    with open(out_path, "w", newline="") as csvfile:
         fieldnames = ["block_start", "block_end", "average_distance"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -154,7 +156,7 @@ def main(
     logging.info(
         f"Layer {min_distance_layer} to {min_distance_layer + layers_to_skip} has the minimum average distance of {min_distance}. Consider examining this layer more closely for potential optimization or removal."
     )
-    logging.info("Layer distances written to layer_distances.csv")
+    logging.info(f"Layer distances written to:\n\t{str(out_path.resolve())}")
 
 
 if __name__ == "__main__":
